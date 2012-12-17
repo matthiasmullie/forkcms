@@ -150,10 +150,27 @@ class BackendFaqCategories extends BackendBaseActionIndex
 	{
 		$this->twig->addFilter('addslashes', new Twig_Filter_Function('addslashes'));
 		$this->twig->addFilter('ucfirst', new Twig_Filter_Function('SpoonFilter::ucfirst'));
+		$this->twig->addFilter('geturl', new Twig_Filter_Function('BackendTemplateModifiers::getURL'));
+		$this->twig->addFilter('getnavigation', new Twig_Filter_Function('BackendTemplateModifiers::getNavigation'));
+		$this->twig->addFilter('getmainnavigation', new Twig_Filter_Function('BackendTemplateModifiers::getMainNavigation'));
+		$this->twig->addFilter('rand', new Twig_Filter_Function('BackendTemplateModifiers::random'));
+		$this->twig->addFilter('formatfloat', new Twig_Filter_Function('BackendTemplateModifiers::formatFloat'));
+		$this->twig->addFilter('truncate', new Twig_Filter_Function('BackendTemplateModifiers::truncate'));
+		$this->twig->addFilter('camelcase', new Twig_Filter_Function('SpoonFilter::toCamelCase'));
+		$this->twig->addFilter('stripnewlines', new Twig_Filter_Function('BackendTemplateModifiers::stripNewlines'));
+		$this->twig->addFilter('dump', new Twig_Filter_Function('BackendTemplateModifiers::dump'));
+		$this->twig->addFilter('formatdate', new Twig_Filter_Function('BackendTemplateModifiers::formatDate'));
+		$this->twig->addFilter('formattime', new Twig_Filter_Function('BackendTemplateModifiers::formatTime'));
+		$this->twig->addFilter('formatdatetime', new Twig_Filter_Function('BackendTemplateModifiers::formatDateTime'));
+		$this->twig->addFilter('formatnumber', new Twig_Filter_Function('BackendTemplateModifiers::formatNumber'));
+		$this->twig->addFilter('tolabel', new Twig_Filter_Function('BackendTemplateModifiers::toLabel'));
 	}
 
 	private function twigGlobals()
 	{
+		$this->twig->addGlobal('CRLF', "\n");
+		$this->twig->addGlobal('TAB', "\t");
+		$this->twig->addGlobal('now', time());
 		$this->twig->addGlobal('LANGUAGE', BL::getWorkingLanguage());
 		$this->twig->addGlobal('SITE_MULTILANGUAGE', SITE_MULTILANGUAGE);
 		$this->twig->addGlobal(
