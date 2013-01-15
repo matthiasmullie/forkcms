@@ -2,7 +2,7 @@
  * Utilities; useful scripts
  *
  * @author	Tijs Verkoyen <tijs@sumocoders.be>
- * @author	Thomas Deceuninck <thomasdeceuninck@netlash.com>
+ * @author	Thomas Deceuninck <thomas@fronto.be>
  */
 var utils =
 {
@@ -254,6 +254,31 @@ utils.string =
 	{
 		if(value == undefined) return '';
 		return value.replace(new RegExp(needle, 'g'), replacement);
+	},
+
+	/**
+	 * Sprintf replaces all arguments that occur in the string (%1$s, %2$s, ...)
+	 *
+	 * @return	string
+	 * @param	string value
+	 * @params	string arguments
+	 */
+	sprintf: function(value)
+	{
+		if(arguments.length < 2) return value;
+		else
+		{
+			// replace $ symbol first, because our RegExp won't except this symbol
+			value = value.replace(/\$s/g, 'Ss');
+
+			// find all variables and replace them
+			for(var i = 1; i < arguments.length; i++)
+			{
+				value = utils.string.replaceAll(value, '%' + i + 'Ss', arguments[i]);
+			}
+		}
+
+		return value;
 	},
 
 	/**
