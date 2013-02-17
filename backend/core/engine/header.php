@@ -200,6 +200,119 @@ class BackendHeader
 	}
 
 	/**
+	 * @return array List of css files to include in the header.
+	 * @todo Name this better, 'processed' is too general.
+	 *		getAssignableCss
+	 *		cssForTemplate
+	 *		...
+	 * @todo the structure that this method returns is seriously ugly, probably
+	 *       to support SpoonTemplate... this should go after all references
+	 *       have been eliminated.
+	 */
+	public function getProcessedCssFiles()
+	{
+		// init var
+		$cssFiles = array();
+		$existingCSSFiles = $this->getCSSFiles();
+
+		// if there aren't any JS-files added we don't need to do something
+		if(!empty($existingCSSFiles))
+		{
+			foreach($existingCSSFiles as $file)
+			{
+				// add lastmodified time
+				if($file['add_timestamp'] !== false) $file['file'] .= (strpos($file['file'], '?') !== false) ? '&m=' . LAST_MODIFIED_TIME : '?m=' . LAST_MODIFIED_TIME;
+
+				// add
+				$cssFiles[] = $file;
+			}
+		}
+		return $cssFiles;
+	}
+
+	// TODO Name this better.
+	public function getProcessedJsFiles()
+	{
+		$jsFiles = array();
+		$existingJSFiles = $this->getJSFiles();
+
+		// if there aren't any JS-files added we don't need to do something
+		if(!empty($existingJSFiles))
+		{
+			// some files should be cached, even if we don't want cached (mostly libraries)
+			$ignoreCache = array(
+				'/backend/core/js/jquery/jquery.js',
+				'/backend/core/js/jquery/jquery.ui.js',
+				'/backend/core/js/ckeditor/jquery.ui.dialog.patch.js',
+				'/backend/core/js/jquery/jquery.tools.js',
+				'/backend/core/js/jquery/jquery.backend.js',
+				'/backend/core/js/ckeditor/ckeditor.js',
+				'/backend/core/js/ckeditor/adapters/jquery.js',
+				'/backend/core/js/ckfinder/ckfinder.js'
+			);
+
+			foreach($existingJSFiles as $file)
+			{
+				// some files shouldn't be uncachable
+				if(in_array($file['file'], $ignoreCache) || $file['add_timestamp'] === false) $file = array('file' => $file['file']);
+
+				// make the file uncachable
+				else
+				{
+					// if the file is processed by PHP we don't want any caching
+					if(substr($file['file'], 0, 11) == '/frontend/js') $file = array('file' => $file['file'] . '&amp;m=' . time());
+
+					// add lastmodified time
+					else
+					{
+						$modifiedTime = (strpos($file['file'], '?') !== false) ? '&amp;m=' . LAST_MODIFIED_TIME : '?m=' . LAST_MODIFIED_TIME;
+						$file = array('file' => $file['file'] . $modifiedTime);
+					}
+				}
+
+				// add
+				$jsFiles[] = $file;
+			}
+		}
+		return $jsFiles;
+	}
+
+	public function getProcessedJsData()
+	{
+		// fetch preferred interface language
+		if(BackendAuthentication::getUser()->isAuthenticated())
+		{
+			$interfaceLanguage = (string) BackendAuthentication::getUser()->getSetting('interface_language');
+		}
+		else $interfaceLanguage = BL::getInterfaceLanguage();
+
+		// some default stuff
+		$this->jsData['debug'] = SPOON_DEBUG;
+		$this->jsData['site']['domain'] = SITE_DOMAIN;
+		$this->jsData['editor']['language'] = $interfaceLanguage;
+		$this->jsData['interface_language'] = $interfaceLanguage;
+
+		// is the user object filled?
+		if(BackendAuthentication::getUser()->isAuthenticated())
+		{
+			$this->jsData['editor']['language'] = (string) BackendAuthentication::getUser()->getSetting('interface_language');
+		}
+
+		// theme
+		if(BackendModel::getModuleSetting('core', 'theme') !== null)
+		{
+			$this->jsData['theme']['theme'] = BackendModel::getModuleSetting('core', 'theme');
+			$this->jsData['theme']['path'] = FRONTEND_PATH . '/themes/' . BackendModel::getModuleSetting('core', 'theme');
+			$this->jsData['theme']['has_css'] = (SpoonFile::exists(FRONTEND_PATH . '/themes/' . BackendModel::getModuleSetting('core', 'theme') . '/core/layout/css/screen.css'));
+			$this->jsData['theme']['has_editor_css'] = (SpoonFile::exists(FRONTEND_PATH . '/themes/' . BackendModel::getModuleSetting('core', 'theme') . '/core/layout/css/editor_content.css'));
+		}
+
+		// encode and add
+		$jsData = json_encode($this->jsData);
+		return $jsData;
+	}
+
+	/**
 	 * Minify a CSS-file
 	 *
 	 * @param string $file The file to be minified.
@@ -254,119 +367,11 @@ class BackendHeader
 	 */
 	public function parse()
 	{
-		// parse CSS
-		$this->parseCSS();
-
-		// parse JS
-		$this->parseJS();
-	}
-
-	/**
-	 * Parse the CSS-files
-	 */
-	public function parseCSS()
-	{
-		// init var
-		$cssFiles = array();
-		$existingCSSFiles = $this->getCSSFiles();
-
-		// if there aren't any JS-files added we don't need to do something
-		if(!empty($existingCSSFiles))
-		{
-			foreach($existingCSSFiles as $file)
-			{
-				// add lastmodified time
-				if($file['add_timestamp'] !== false) $file['file'] .= (strpos($file['file'], '?') !== false) ? '&m=' . LAST_MODIFIED_TIME : '?m=' . LAST_MODIFIED_TIME;
-
-				// add
-				$cssFiles[] = $file;
-			}
-		}
-
-		// css-files
-		$this->tpl->assign('cssFiles', $cssFiles);
-	}
-
-	/**
-	 * Parse the JS-files
-	 */
-	public function parseJS()
-	{
-		$jsFiles = array();
-		$existingJSFiles = $this->getJSFiles();
-
-		// if there aren't any JS-files added we don't need to do something
-		if(!empty($existingJSFiles))
-		{
-			// some files should be cached, even if we don't want cached (mostly libraries)
-			$ignoreCache = array(
-				'/backend/core/js/jquery/jquery.js',
-				'/backend/core/js/jquery/jquery.ui.js',
-				'/backend/core/js/ckeditor/jquery.ui.dialog.patch.js',
-				'/backend/core/js/jquery/jquery.tools.js',
-				'/backend/core/js/jquery/jquery.backend.js',
-				'/backend/core/js/ckeditor/ckeditor.js',
-				'/backend/core/js/ckeditor/adapters/jquery.js',
-				'/backend/core/js/ckfinder/ckfinder.js'
-			);
-
-			foreach($existingJSFiles as $file)
-			{
-				// some files shouldn't be uncachable
-				if(in_array($file['file'], $ignoreCache) || $file['add_timestamp'] === false) $file = array('file' => $file['file']);
-
-				// make the file uncachable
-				else
-				{
-					// if the file is processed by PHP we don't want any caching
-					if(substr($file['file'], 0, 11) == '/frontend/js') $file = array('file' => $file['file'] . '&amp;m=' . time());
-
-					// add lastmodified time
-					else
-					{
-						$modifiedTime = (strpos($file['file'], '?') !== false) ? '&amp;m=' . LAST_MODIFIED_TIME : '?m=' . LAST_MODIFIED_TIME;
-						$file = array('file' => $file['file'] . $modifiedTime);
-					}
-				}
-
-				// add
-				$jsFiles[] = $file;
-			}
-		}
-
-		// assign JS-files
-		$this->tpl->assign('jsFiles', $jsFiles);
-
-		// fetch preferred interface language
-		if(BackendAuthentication::getUser()->isAuthenticated())
-		{
-			$interfaceLanguage = (string) BackendAuthentication::getUser()->getSetting('interface_language');
-		}
-		else $interfaceLanguage = BL::getInterfaceLanguage();
-
-		// some default stuff
-		$this->jsData['debug'] = SPOON_DEBUG;
-		$this->jsData['site']['domain'] = SITE_DOMAIN;
-		$this->jsData['editor']['language'] = $interfaceLanguage;
-		$this->jsData['interface_language'] = $interfaceLanguage;
-
-		// is the user object filled?
-		if(BackendAuthentication::getUser()->isAuthenticated())
-		{
-			$this->jsData['editor']['language'] = (string) BackendAuthentication::getUser()->getSetting('interface_language');
-		}
-
-		// theme
-		if(BackendModel::getModuleSetting('core', 'theme') !== null)
-		{
-			$this->jsData['theme']['theme'] = BackendModel::getModuleSetting('core', 'theme');
-			$this->jsData['theme']['path'] = FRONTEND_PATH . '/themes/' . BackendModel::getModuleSetting('core', 'theme');
-			$this->jsData['theme']['has_css'] = (SpoonFile::exists(FRONTEND_PATH . '/themes/' . BackendModel::getModuleSetting('core', 'theme') . '/core/layout/css/screen.css'));
-			$this->jsData['theme']['has_editor_css'] = (SpoonFile::exists(FRONTEND_PATH . '/themes/' . BackendModel::getModuleSetting('core', 'theme') . '/core/layout/css/editor_content.css'));
-		}
-
-		// encode and add
-		$jsData = json_encode($this->jsData);
-		$this->tpl->assign('jsData', 'var jsData = ' . $jsData . ';' . "\n");
+		$this->tpl->assign('cssFiles', $this->getProcessedCssFiles());
+		$this->tpl->assign('jsFiles', $this->getProcessedJsFiles());
+		$this->tpl->assign(
+			'jsData',
+			'var jsData = ' . $this->getProcessedJsData() . ';' . "\n"
+		);
 	}
 }

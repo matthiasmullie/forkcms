@@ -137,8 +137,11 @@ class BackendFaqCategories extends BackendBaseActionIndex
 	private function twigConfig()
 	{
 		$config = array(
+			// TODO remove twig dir?
 			'cache' => BACKEND_CACHE_PATH . '/cached_templates/twig',
-			'debug' => SPOON_DEBUG, // TODO remove Spoon dependency.
+
+			// TODO remove Spoon dependency?
+			'debug' => SPOON_DEBUG,
 		);
 		return $config;
 	}
@@ -187,6 +190,13 @@ class BackendFaqCategories extends BackendBaseActionIndex
 		$workingLanguages = array();
 		foreach($languages as $abbreviation => $label) $workingLanguages[] = array('abbr' => $abbreviation, 'label' => $label, 'selected' => ($abbreviation == BackendLanguage::getWorkingLanguage()));
 		$this->twig->addGlobal('workingLanguages', $workingLanguages);
+		$this->twig->addGlobal('jsFiles', $this->header->getProcessedJsFiles());
+		$this->twig->addGlobal('cssFiles', $this->header->getProcessedCssFiles());
+		$this->twig->addGlobal(
+			'jsData',
+			// TODO remove the 'var jsData = ... ' crap, belongs in template.
+			'var jsData = ' . $this->header->getProcessedJsData() . ";\n"
+		);
 	}
 
 	/**
