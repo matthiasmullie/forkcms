@@ -30,24 +30,9 @@ class BackendFaqCategories extends BackendBaseActionIndex
 	public function execute()
 	{
 		parent::execute();
-
-		// TODO extract
-		$this->twig();
-
 		$this->loadDataGrid();
 		$this->parse();
-
-		// TODO remove exception silencing.
-		// There is no categories.tpl anymore, so BackendBaseActionIndex#display()
-		// will throw an exception.
-		try
-		{
-			$this->display();
-		}
-		catch(Exception $e)
-		{
-			// empty on purpose.
-		}
+		$this->display();
 	}
 
 	/**
@@ -85,7 +70,11 @@ class BackendFaqCategories extends BackendBaseActionIndex
 	 */
 	protected function parse()
 	{
-		echo $this->twigRender();
+		$this->context = array(
+			'dataGrid' => ($this->dataGrid->getNumResults() ? $this->dataGrid->getContent() : false),
+			'showFaqAddCategory' => BackendAuthentication::isAllowedAction('add_category')
+				&& $this->multipleCategoriesAllowed
+		);
 	}
 
 	/**
@@ -106,120 +95,4 @@ class BackendFaqCategories extends BackendBaseActionIndex
 		if($count == 1) return '<a href="' . $link . '">' . $count . ' ' . BL::getLabel('Question') . '</a>';
 		return '';
 	}
-
-
-
-	//{{{ TWIG
-
-	/**
-	 * Setup Twig environment.
-	 */
-	private function twig()
-	{
-		$this->twig = new \Twig_Environment($this->twigLoader(), $this->twigConfig());
-		$this->twigFilters();
-		$this->twigGlobals();
-	}
-
-	/**
-	 * @return Twig_LoaderInterface The template loader for the Twig environment.
-	 */
-	private function twigLoader()
-	{
-		$loader = new \Twig_Loader_Filesystem(BACKEND_CORE_PATH . '/layout/templates');
-		$loader->addPath(BACKEND_MODULE_PATH . '/layout/templates', 'faq');
-		return $loader;
-	}
-
-	/**
-	 * return @array Configuration for the Twig environment.
-	 */
-	private function twigConfig()
-	{
-		$config = array(
-			// TODO remove twig dir?
-			'cache' => BACKEND_CACHE_PATH . '/cached_templates/twig',
-
-			// TODO remove Spoon dependency?
-			'debug' => SPOON_DEBUG,
-		);
-		return $config;
-	}
-
-	/**
-	 * Setup filters for the Twig environment.
-	 */
-	private function twigFilters()
-	{
-		$this->twig->addFilter('addslashes', new Twig_Filter_Function('addslashes'));
-		$this->twig->addFilter('ucfirst', new Twig_Filter_Function('SpoonFilter::ucfirst'));
-		$this->twig->addFilter('geturl', new Twig_Filter_Function('BackendTemplateModifiers::getURL'));
-		$this->twig->addFilter('getnavigation', new Twig_Filter_Function('BackendTemplateModifiers::getNavigation'));
-		$this->twig->addFilter('getmainnavigation', new Twig_Filter_Function('BackendTemplateModifiers::getMainNavigation'));
-		$this->twig->addFilter('rand', new Twig_Filter_Function('BackendTemplateModifiers::random'));
-		$this->twig->addFilter('formatfloat', new Twig_Filter_Function('BackendTemplateModifiers::formatFloat'));
-		$this->twig->addFilter('truncate', new Twig_Filter_Function('BackendTemplateModifiers::truncate'));
-		$this->twig->addFilter('camelcase', new Twig_Filter_Function('SpoonFilter::toCamelCase'));
-		$this->twig->addFilter('stripnewlines', new Twig_Filter_Function('BackendTemplateModifiers::stripNewlines'));
-		$this->twig->addFilter('dump', new Twig_Filter_Function('BackendTemplateModifiers::dump'));
-		$this->twig->addFilter('formatdate', new Twig_Filter_Function('BackendTemplateModifiers::formatDate'));
-		$this->twig->addFilter('formattime', new Twig_Filter_Function('BackendTemplateModifiers::formatTime'));
-		$this->twig->addFilter('formatdatetime', new Twig_Filter_Function('BackendTemplateModifiers::formatDateTime'));
-		$this->twig->addFilter('formatnumber', new Twig_Filter_Function('BackendTemplateModifiers::formatNumber'));
-		$this->twig->addFilter('tolabel', new Twig_Filter_Function('BackendTemplateModifiers::toLabel'));
-	}
-
-	private function twigGlobals()
-	{
-		$this->twig->addGlobal('CRLF', "\n");
-		$this->twig->addGlobal('TAB', "\t");
-		$this->twig->addGlobal('now', time());
-		$this->twig->addGlobal('LANGUAGE', BL::getWorkingLanguage());
-		$this->twig->addGlobal('SITE_MULTILANGUAGE', SITE_MULTILANGUAGE);
-		$this->twig->addGlobal(
-			'SITE_TITLE',
-			BackendModel::getModuleSetting(
-				'core',
-				'site_title_' . BL::getWorkingLanguage(), SITE_DEFAULT_TITLE
-			)
-		);
-		// TODO goes up, here we assume the current user is authenticated already.
-		$this->twig->addGlobal('user', BackendAuthentication::getUser());
-
-		$languages = BackendLanguage::getWorkingLanguages();
-		$workingLanguages = array();
-		foreach($languages as $abbreviation => $label) $workingLanguages[] = array('abbr' => $abbreviation, 'label' => $label, 'selected' => ($abbreviation == BackendLanguage::getWorkingLanguage()));
-		$this->twig->addGlobal('workingLanguages', $workingLanguages);
-		$this->twig->addGlobal('jsFiles', $this->header->getProcessedJsFiles());
-		$this->twig->addGlobal('cssFiles', $this->header->getProcessedCssFiles());
-		$this->twig->addGlobal(
-			'jsData',
-			// TODO remove the 'var jsData = ... ' crap, belongs in template.
-			'var jsData = ' . $this->header->getProcessedJsData() . ";\n"
-		);
-	}
-
-	/**
-	 * @internal Called by BackendFaqCategories#parse()
-	 *
-	 * @return string Rendered output of this action via the Twig environment.
-	 */
-	private function twigRender()
-	{
-		// TODO design
-		//	- render template?
-		//	- set (add to) context via method in the parent class?
-		//	- return a response?
-		$tplVars = array(
-			'dataGrid' => ($this->dataGrid->getNumResults() ? $this->dataGrid->getContent() : false),
-			'showFaqAddCategory' => BackendAuthentication::isAllowedAction('add_category')
-				&& $this->multipleCategoriesAllowed
-		);
-		return $this->twig->loadTemplate('@faq/categories.html.twig')->render($tplVars);
-	}
-
-	//}}}
-
-
-
 }

@@ -156,29 +156,37 @@ class BackendBaseAction extends BackendBaseObject
 	 *
 	 * @var	BackendTemplate
 	 */
-	public $tpl;
+	protected $tpl;
+
+	/**
+	 * @var array context to render in the template.
+	 */
+	protected $context = array();
 
 	/**
 	 * A reference to the URL-instance
 	 *
 	 * @var	BackendURL
 	 */
-	public $URL;
+	protected $url;
 
 	/**
 	 * The constructor will set some properties. It populates the parameter array with urldecoded
 	 * values for easy-use.
+	 *
+	 * @param BackendURL $url URL representing the current request to the backend.
+	 * @param BackendTemplate $tpl Template handling for the backend.
+	 * @param BackendHeader $header Header utils for the backend.
 	 */
-	public function __construct()
+	public function __construct($url, $tpl, $header)
 	{
-		// get objects from the reference so they are accessable from the action-object
-		$this->tpl = Spoon::get('template');
-		$this->URL = Spoon::get('url');
-		$this->header = Spoon::get('header');
+		$this->url = $url;
+		$this->tpl =  $tpl;
+		$this->header = $header;
 
 		// store the current module and action (we grab them from the URL)
-		$this->setModule($this->URL->getModule());
-		$this->setAction($this->URL->getAction());
+		$this->setModule($this->url->getModule());
+		$this->setAction($this->url->getAction());
 
 		// populate the parameter array, we loop GET and urldecode the values for usage later on
 		foreach((array) $_GET as $key => $value) $this->parameters[$key] = $value;
@@ -201,10 +209,13 @@ class BackendBaseAction extends BackendBaseObject
 		 */
 		if($template === null)
 		{
-			$template = BACKEND_MODULE_PATH . '/layout/templates/' . $this->URL->getAction() . '.tpl';
+			// the default module template directory should already be registered
+			// by BackendTemplate, so we can reference it by namespace.
+			$template = "@{$this->url->getModule()}/{$this->url->getAction()}.html.twig";
+
 		}
 
-		$this->content = $this->tpl->getContent($template);
+		$this->content = $this->tpl->loadTemplate($template)->render($this->context);
 	}
 
 	/**
@@ -307,6 +318,9 @@ class BackendBaseAction extends BackendBaseObject
 
 	/**
 	 * Parse to template
+	 * Typically, instance of child classes will build up $this->context.
+	 *
+	 * TODO THIS METHOD NAME IS UGLY, WE SHOULD KILL IT
 	 */
 	protected function parse()
 	{
@@ -316,12 +330,12 @@ class BackendBaseAction extends BackendBaseObject
 	/**
 	 * Redirect to a given URL
 	 *
-	 * @param string $URL The URL to redirect to.
+	 * @param string $url The URL to redirect to.
 	 */
-	public function redirect($URL)
+	public function redirect($url)
 	{
 		$response = new RedirectResponse(
-			$URL, 302, SpoonHTTP::getHeadersList()
+			$url, 302, SpoonHTTP::getHeadersList()
 		);
 
 		/*
@@ -888,10 +902,11 @@ class BackendBaseWidget
 	 * The constructor will set some properties, it populates the parameter array with urldecoded
 	 * values for ease of use.
 	 */
-	public function __construct()
+	public function __construct($url, $tpl, $header)
 	{
-		$this->tpl = Spoon::get('template');
-		$this->header = Spoon::get('header');
+		$this->url = $url;
+		$this->tpl = $tpl;
+		$this->header = $header;
 	}
 
 	/**

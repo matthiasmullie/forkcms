@@ -37,14 +37,19 @@ class Backend extends KernelLoader implements ApplicationInterface
 	 */
 	public function initialize()
 	{
-		$URL = new BackendURL();
-		new BackendTemplate();
-		new BackendNavigation();
-		new BackendHeader();
+		// TODO pass what to what; tpl to header, header to tpl, ...?
+		//		This can be made cleaner, registry access all over the place
+		//		doesn't make things simpler (Spoon::get('template') anyone?.
+		//		In a feeble attempt to make dependencies more clear, I'm passing
+		//		stuff down to the objects that need it.
+		$url = new BackendURL();
+		$tpl = new BackendTemplate($url);
+		$nav = new BackendNavigation();
+		$header = new BackendHeader($url, $tpl);
 
-		$this->action = new BackendAction();
-		$this->action->setModule($URL->getModule());
-		$this->action->setAction($URL->getAction());
+		$this->action = new BackendAction($url, $tpl, $header);
+		$this->action->setModule($url->getModule());
+		$this->action->setAction($url->getAction());
 		$this->action->setKernel($this->getKernel());
 	}
 }

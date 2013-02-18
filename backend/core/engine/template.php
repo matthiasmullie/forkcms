@@ -1,11 +1,147 @@
 <?php
-
 /*
  * This file is part of Fork CMS.
  *
  * For the full copyright and license information, please view the license
  * file that was distributed with this source code.
  */
+
+/**
+ * Template handling for the backend.
+ *
+ * @author <per@wijs.be>
+ */
+class BackendTemplate
+{
+	/**
+	 * @var \Twig_Environment
+	 */
+	private $twig;
+
+	/**
+	 * @var BackendURL
+	 */
+	private $url;
+
+	/**
+	 * @param BackendURL $url URL representing current request.
+	 */
+	public function __construct($url)
+	{
+		$this->url = $url;
+		$this->twig = $this->getDefaultEnvironment();
+		$this->registerFilters();
+		$this->registerGlobals();
+		$this->registerTranslations();
+	}
+
+	/**
+	 * Assign to the template by name.
+	 *
+	 * @param string $name The name in the template by which the value shall be known.
+	 * @param mixed $value The value to assign by name.
+	 * @internal workaround for the fact that ->assign() is used in places where
+	 *           the BackendTemplate was gotten from the reference and then assign()
+	 *           is called on it.  We cannot control them all at once, so for the
+	 *           time being we mimick this by adding a global template variable.
+	 * @todo Track down occurences of this usage and remove where necessary.
+	 */
+	public function assign($name, $value)
+	{
+		$this->twig->addGlobal($name, $value);
+	}
+
+	/**
+	 * @return \Twig_Environment The default environment.
+	 */
+	protected function getDefaultEnvironment()
+	{
+		$config = array(
+			'cache' => BACKEND_CACHE_PATH . '/cached_templates/twig',
+			'charset' => SPOON_CHARSET,
+			'debug' => SPOON_DEBUG,
+		);
+		$loader = new \Twig_Loader_Filesystem(BACKEND_CORE_PATH . '/layout/templates');
+		// Add template directory for the current module, and namespace those
+		// templates with the module's name.
+		$loader->addPath(
+			BACKEND_MODULES_PATH . '/' . $this->url->getModule() . '/layout/templates',
+			$this->url->getModule()
+		);
+
+		return new \Twig_Environment($loader, $config);
+	}
+
+	/**
+	 * Load a template.
+	 * @param string $template The name/path of the template.
+	 * @return \Twig_Template The loaded template.
+	 */
+	public function loadTemplate($template)
+	{
+		return $this->twig->loadTemplate($template);
+	}
+
+	/**
+	 * Register filters with the template environment.
+	 */
+	private function registerFilters()
+	{
+		$this->twig->addFilter('addslashes',new Twig_Filter_Function('addslashes'));
+		$this->twig->addFilter('ucfirst', new Twig_Filter_Function('SpoonFilter::ucfirst'));
+		$this->twig->addFilter('geturl', new Twig_Filter_Function('BackendTemplateModifiers::getURL'));
+		$this->twig->addFilter('getnavigation', new Twig_Filter_Function('BackendTemplateModifiers::getNavigation'));
+		$this->twig->addFilter('getmainnavigation', new Twig_Filter_Function('BackendTemplateModifiers::getMainNavigation'));
+		$this->twig->addFilter('rand', new Twig_Filter_Function('BackendTemplateModifiers::random'));
+		$this->twig->addFilter('formatfloat', new Twig_Filter_Function('BackendTemplateModifiers::formatFloat'));
+		$this->twig->addFilter('truncate', new Twig_Filter_Function('BackendTemplateModifiers::truncate'));
+		$this->twig->addFilter('camelcase', new Twig_Filter_Function('SpoonFilter::toCamelCase'));
+		$this->twig->addFilter('stripnewlines', new Twig_Filter_Function('BackendTemplateModifiers::stripNewlines'));
+		$this->twig->addFilter('dump', new Twig_Filter_Function('BackendTemplateModifiers::dump'));
+		$this->twig->addFilter('formatdate', new Twig_Filter_Function('BackendTemplateModifiers::formatDate'));
+		$this->twig->addFilter('formattime', new Twig_Filter_Function('BackendTemplateModifiers::formatTime'));
+		$this->twig->addFilter('formatdatetime', new Twig_Filter_Function('BackendTemplateModifiers::formatDateTime'));
+		$this->twig->addFilter('formatnumber', new Twig_Filter_Function('BackendTemplateModifiers::formatNumber'));
+		$this->twig->addFilter('tolabel', new Twig_Filter_Function('BackendTemplateModifiers::toLabel'));
+	}
+
+	/**
+	 * Register global variables with the environment.
+	 */
+	private function registerGlobals()
+	{
+		$this->twig->addGlobal('CRLF', "\n");
+		$this->twig->addGlobal('TAB', "\t");
+		$this->twig->addGlobal('now', time());
+		$this->twig->addGlobal('LANGUAGE', BL::getWorkingLanguage());
+		$this->twig->addGlobal('SITE_MULTILANGUAGE', SITE_MULTILANGUAGE);
+		$this->twig->addGlobal(
+			'SITE_TITLE',
+			BackendModel::getModuleSetting(
+				'core',
+				'site_title_' . BL::getWorkingLanguage(), SITE_DEFAULT_TITLE
+			)
+		);
+
+		// TODO use SPOON_DEBUG again? That would be a SPOT violation, but you
+		// _could_ consider it semantically more correct.
+		$this->twig->addGlobal('debug', $this->twig->isDebug());
+
+		// TODO hmz, here we assume the current user is authenticated already.
+		$this->twig->addGlobal('user', BackendAuthentication::getUser());
+
+		$languages = BackendLanguage::getWorkingLanguages();
+		$workingLanguages = array();
+		foreach($languages as $abbreviation => $label) $workingLanguages[] = array('abbr' => $abbreviation, 'label' => $label, 'selected' => ($abbreviation == BackendLanguage::getWorkingLanguage()));
+		$this->twig->addGlobal('workingLanguages', $workingLanguages);
+	}
+
+	private function registerTranslations()
+	{
+	}
+}
+
+
 
 /**
  * This is our extended version of SpoonTemplate
@@ -18,7 +154,7 @@
  * @author Davy Hellemans <davy.hellemans@netlash.com>
  * @author Tijs Verkoyen <tijs@sumocoders.be>
  */
-class BackendTemplate extends SpoonTemplate
+class BackendTemplate_OLD_ extends SpoonTemplate
 {
 	/**
 	 * Should we add slashes to each value?

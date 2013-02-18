@@ -51,14 +51,18 @@ class BackendHeader
 	 */
 	private $URL;
 
-	public function __construct()
+	/**
+	 * @param BackendURL $url URL represenation of current request.
+	 * @param BackendTemplate $tpl The template for the backend.
+	 */
+	public function __construct($url, $tpl)
 	{
 		// store in reference so we can access it from everywhere
 		Spoon::set('header', $this);
 
 		// grab from the reference
-		$this->URL = Spoon::get('url');
-		$this->tpl = Spoon::get('template');
+		$this->URL = $url;
+		$this->tpl = $tpl;
 	}
 
 	/**

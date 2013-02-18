@@ -32,11 +32,15 @@ class BackendAction extends BackendBaseObject
 
 	/**
 	 * You have to specify the action and module so we know what to do with this instance
+	 * @param BackendURL $url URL representing the current request to the backend.
+	 * @param BackendTemplate $tpl Template handling for the backend.
+	 * @param BackendHeader $header Header utils for the backend.
 	 */
-	public function __construct()
+	public function __construct($url, $tpl, $header)
 	{
-		// grab stuff from the reference and store them in this object (for later/easy use)
-		$this->tpl = Spoon::get('template');
+		$this->url = $url;
+		$this->tpl = $tpl;
+		$this->header = $header;
 	}
 
 	/**
@@ -62,18 +66,8 @@ class BackendAction extends BackendBaseObject
 		// validate if class exists (aka has correct name)
 		if(!class_exists($actionClassName)) throw new BackendException('The actionfile is present, but the classname should be: ' . $actionClassName . '.');
 
-		// get working languages
-		$languages = BackendLanguage::getWorkingLanguages();
-		$workingLanguages = array();
-
-		// loop languages and build an array that we can assign
-		foreach($languages as $abbreviation => $label) $workingLanguages[] = array('abbr' => $abbreviation, 'label' => $label, 'selected' => ($abbreviation == BackendLanguage::getWorkingLanguage()));
-
-		// assign the languages
-		$this->tpl->assign('workingLanguages', $workingLanguages);
-
 		// create action-object
-		$object = new $actionClassName();
+		$object = new $actionClassName($this->url, $this->tpl, $this->header);
 		$object->setKernel($this->getKernel());
 		$object->execute();
 		return $object->getContent();
