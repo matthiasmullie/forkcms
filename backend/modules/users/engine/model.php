@@ -364,7 +364,7 @@ class BackendUsersModel
 			'INSERT INTO users_settings(user_id, name, value)
 			 VALUES(?, ?, ?)
 			 ON DUPLICATE KEY UPDATE value = ?',
-			array($userId, $setting, serialize($value), serialize($value))
+			array((int) $userId, $setting, serialize($value), serialize($value))
 		);
 	}
 
