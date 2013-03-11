@@ -1,10 +1,12 @@
 <?php
+
 /*
  * This file is part of Fork CMS.
  *
  * For the full copyright and license information, please view the license
  * file that was distributed with this source code.
  */
+
 
 /**
  * Template handling for the backend.
@@ -31,6 +33,7 @@ class BackendTemplate
 		$this->url = $url;
 		$this->twig = $this->getDefaultEnvironment();
 		$this->registerFilters();
+		$this->registerTags();
 		$this->registerGlobals();
 		$this->registerTranslations();
 	}
@@ -57,7 +60,7 @@ class BackendTemplate
 	protected function getDefaultEnvironment()
 	{
 		$config = array(
-			'cache' => BACKEND_CACHE_PATH . '/cached_templates/twig',
+			'cache' => BACKEND_CACHE_PATH . '/cached_templates',
 			'charset' => SPOON_CHARSET,
 			'debug' => SPOON_DEBUG,
 		);
@@ -136,13 +139,555 @@ class BackendTemplate
 		$this->twig->addGlobal('workingLanguages', $workingLanguages);
 	}
 
+	private function registerTags()
+	{
+		$this->twig->addTokenParser(new FormTokenParser());
+		$this->twig->addTokenParser(new EndformTokenParser());
+		$this->twig->addTokenParser(new FormFieldTokenParser());
+	}
+
 	private function registerTranslations()
 	{
 	}
 }
 
 
+/**
+ * This is our class with custom modifiers.
+ *
+ * @author Tijs Verkoyen <tijs@sumocoders.be>
+ */
+class BackendTemplateModifiers
+{
+	/**
+	 * Dumps the data
+	 * 	syntax: {$var|dump}
+	 *
+	 * @param string $var The variable to dump.
+	 * @return string
+	 */
+	public static function dump($var)
+	{
+		Spoon::dump($var, false);
+	}
 
+	/**
+	 * Format a UNIX-timestamp as a date
+	 * syntax: {$var|formatdate}
+	 *
+	 * @param int $var The UNIX-timestamp to format.
+	 * @return string
+	 */
+	public static function formatDate($var)
+	{
+		// get setting
+		$format = BackendAuthentication::getUser()->getSetting('date_format');
+
+		// format the date
+		return SpoonDate::getDate($format, (int) $var, BackendLanguage::getInterfaceLanguage());
+	}
+
+	/**
+	 * Format a UNIX-timestamp as a datetime
+	 * syntax: {$var|formatdatetime}
+	 *
+	 * @param int $var The UNIX-timestamp to format.
+	 * @return string
+	 */
+	public static function formatDateTime($var)
+	{
+		// get setting
+		$format = BackendAuthentication::getUser()->getSetting('datetime_format');
+
+		// format the date
+		return SpoonDate::getDate($format, (int) $var, BackendLanguage::getInterfaceLanguage());
+	}
+
+	/**
+	 * Format a number as a float
+	 * syntax: {$var|formatfloat}
+	 *
+	 * @param float $number The number to format.
+	 * @param int[optional] $decimals The number of decimals.
+	 * @return string
+	 */
+	public static function formatFloat($number, $decimals = 2)
+	{
+		$number = (float) $number;
+		$decimals = (int) $decimals;
+
+		// get setting
+		$format = BackendAuthentication::getUser()->getSetting('number_format', 'dot_nothing');
+
+		// get separators
+		$separators = explode('_', $format);
+		$separatorSymbols = array('comma' => ',', 'dot' => '.', 'space' => ' ', 'nothing' => '');
+		$decimalSeparator = (isset($separators[0], $separatorSymbols[$separators[0]]) ? $separatorSymbols[$separators[0]] : null);
+		$thousandsSeparator = (isset($separators[1], $separatorSymbols[$separators[1]]) ? $separatorSymbols[$separators[1]] : null);
+
+		// format the number
+		return number_format($number, $decimals, $decimalSeparator, $thousandsSeparator);
+	}
+
+	/**
+	 * Format a number
+	 * syntax: {$var|formatnumber}
+	 *
+	 * @param float $var The number to format.
+	 * @return string
+	 */
+	public static function formatNumber($var)
+	{
+		$var = (float) $var;
+
+		// get setting
+		$format = BackendAuthentication::getUser()->getSetting('number_format', 'dot_nothing');
+
+		// get amount of decimals
+		$decimals = (strpos($var, '.') ? strlen(substr($var, strpos($var, '.') + 1)) : 0);
+
+		// get separators
+		$separators = explode('_', $format);
+		$separatorSymbols = array('comma' => ',', 'dot' => '.', 'space' => ' ', 'nothing' => '');
+		$decimalSeparator = (isset($separators[0], $separatorSymbols[$separators[0]]) ? $separatorSymbols[$separators[0]] : null);
+		$thousandsSeparator = (isset($separators[1], $separatorSymbols[$separators[1]]) ? $separatorSymbols[$separators[1]] : null);
+
+		// format the number
+		return number_format($var, $decimals, $decimalSeparator, $thousandsSeparator);
+	}
+
+	/**
+	 * Format a UNIX-timestamp as a date
+	 * syntac: {$var|formatdate}
+	 *
+	 * @param int $var The UNIX-timestamp to format.
+	 * @return string
+	 */
+	public static function formatTime($var)
+	{
+		// get setting
+		$format = BackendAuthentication::getUser()->getSetting('time_format');
+
+		// format the date
+		return SpoonDate::getDate($format, (int) $var, BackendLanguage::getInterfaceLanguage());
+	}
+
+	/**
+	 * Convert a var into main-navigation-html
+	 * 	syntax: {$var|getmainnavigation}
+	 *
+	 * @param string[optional] $var A placeholder var, will be replaced with the generated HTML.
+	 * @return string
+	 */
+	public static function getMainNavigation($var = null)
+	{
+		$var = (string) $var; // @todo what is this doing here?
+		return Spoon::get('navigation')->getNavigation(1, 1);
+	}
+
+	/**
+	 * Convert a var into navigation-html
+	 * syntax: {$var|getnavigation:startdepth[:maximumdepth]}
+	 *
+	 * @param string[optional] $var A placeholder var, will be replaced with the generated HTML.
+	 * @param int[optional] $startDepth The start depth of the navigation to get.
+	 * @param int[optional] $endDepth The ending depth of the navigation to get.
+	 * @return string
+	 */
+	public static function getNavigation($var = null, $startDepth = null, $endDepth = null)
+	{
+		$var = (string) $var;
+		$startDepth = ($startDepth !== null) ? (int) $startDepth : 2;
+		$endDepth = ($endDepth !== null) ? (int) $endDepth : null;
+
+		// return navigation
+		return Spoon::get('navigation')->getNavigation($startDepth, $endDepth);
+	}
+
+	/**
+	 * Convert a var into a URL
+	 * syntax: {$var|geturl:<action>[:<module>]}
+	 *
+	 * @param string[optional] $var A placeholder variable, it will be replaced with the URL.
+	 * @param string[optional] $action The action to build the URL for.
+	 * @param string[optional] $module The module to build the URL for.
+	 * @param string[optional] $suffix A string to append.
+	 * @return string
+	 */
+	public static function getURL($var = null, $action = null, $module = null, $suffix = null)
+	{
+		// redefine
+		$var = (string) $var;
+		$action = ($action !== null) ? (string) $action : null;
+		$module = ($module !== null) ? (string) $module : null;
+
+		// build the url
+		return BackendModel::createURLForAction($action, $module, BackendLanguage::getWorkingLanguage()) . $suffix;
+	}
+
+	/**
+	 * Get a random var between a min and max
+	 * syntax: {$var|rand:min:max}
+	 *
+	 * @param string[optional] $var The string passed from the template.
+	 * @param int $min The minimum number.
+	 * @param int $max The maximim number.
+	 * @return int
+	 */
+	public static function random($var = null, $min, $max)
+	{
+		$var = (string) $var;
+		return rand((int) $min, (int) $max);
+	}
+
+	/**
+	 * Convert a multiline string into a string without newlines so it can be handles by JS
+	 * syntax: {$var|stripnewlines}
+	 *
+	 * @param string $var The variable that should be processed.
+	 * @return string
+	 */
+	public static function stripNewlines($var)
+	{
+		return str_replace(array("\n", "\r"), '', $var);
+	}
+
+	/**
+	 * Convert this string into a well formed label.
+	 * 	syntax: {$var|tolabel}
+	 *
+	 * @param string $value The value to convert to a label.
+	 * @return string
+	 */
+	public static function toLabel($value)
+	{
+		return SpoonFilter::ucfirst(BL::lbl(SpoonFilter::toCamelCase($value, '_', false)));
+	}
+
+	/**
+	 * Truncate a string
+	 * 	syntax: {$var|truncate:max-length[:append-hellip]}
+	 *
+	 * @param string[optional] $var A placeholder var, will be replaced with the generated HTML.
+	 * @param int $length The maximum length of the truncated string.
+	 * @param bool[optional] $useHellip Should a hellip be appended if the length exceeds the requested length?
+	 * @return string
+	 */
+	public static function truncate($var = null, $length, $useHellip = true)
+	{
+		// remove special chars
+		$var = htmlspecialchars_decode($var, ENT_QUOTES);
+
+		// remove HTML
+		$var = strip_tags($var);
+
+		// less characters
+		if(mb_strlen($var) <= $length) return SpoonFilter::htmlspecialchars($var);
+
+		// more characters
+		else
+		{
+			// hellip is seen as 1 char, so remove it from length
+			if($useHellip) $length = $length - 1;
+
+			// get the amount of requested characters
+			$var = mb_substr($var, 0, $length);
+
+			// add hellip
+			if($useHellip) $var .= '…';
+
+			return SpoonFilter::htmlspecialchars($var, ENT_QUOTES);
+		}
+	}
+}
+
+
+/**
+ * Twig node for writing out a compiled version of a closing form tag.
+ *
+ * @author <per@wijs.be>
+ */
+class EndformNode extends Twig_Node
+{
+	/**
+	 * @param int $lineno Line number in the template source file.
+	 * @param string $tag
+	 */
+	public function __construct($lineno, $tag)
+	{
+		parent::__construct(array(), array(), $lineno, $tag);
+	}
+
+	/**
+	 * @param Twig_Compiler $compiler
+	 */
+	public function compile(Twig_Compiler $compiler)
+	{
+		$compiler
+			->addDebugInfo($this)
+			->write('echo \'</form>\';');
+	}
+}
+
+
+/**
+ * Twig token parser for form closing tag.
+ *
+ * @author <per@wijs.be>
+ */
+class EndformTokenParser extends Twig_TokenParser
+{
+	/**
+	 * @param Twig_Token $token Token consumed by the lexer.
+	 * @return Twig_Node
+	 * @throw Twig_Error_Syntax
+	 */
+	public function parse(Twig_Token $token)
+	{
+		$stream = $this->parser->getStream();
+		if($stream->getCurrent()->getType() != Twig_Token::BLOCK_END_TYPE)
+		{
+			$error = sprintf("'%s' does not require any arguments.", $this->getTag());
+			throw new Twig_Error_Syntax($error, $token->getLine(), $this->parser->getFilename());
+		}
+		$stream->expect(Twig_Token::BLOCK_END_TYPE);
+
+		if(FormState::$current === null)
+		{
+			throw new Twig_Error_Syntax(
+				'Trying to close a form tag, while none opened',
+				$token->getLine(),
+				$this->parser->getFilename()
+			);
+		}
+		else
+		{
+			FormState::$current = null;
+		}
+		return new EndformNode($token->getLine(), $this->getTag());
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getTag()
+	{
+		return 'endform';
+	}
+}
+
+
+/**
+ * Twig node for writing out the compiled version of form field.
+ *
+ * @author <per@wijs.be>
+ */
+class FormFieldNode extends Twig_Node
+{
+	/**
+	 * @param string $form Name of the template var holding the form this field
+	 *                     belongs to.
+	 * @param string $field Name of the field to render.
+	 * @param int $lineno Line number in the template source file.
+	 * @param string $tag
+	 */
+	public function __construct($form, $field, $lineno, $tag)
+	{
+		parent::__construct(array(), array(), $lineno, $tag);
+		$this->form = $form;
+		$this->field = $field;
+	}
+
+	/**
+	 * @param Twig_Compiler $compiler
+	 */
+	public function compile(Twig_Compiler $compiler)
+	{
+		$parseField = "\$context['{$this->form}']->getField('{$this->field}')->parse()";
+		$compiler
+			->addDebugInfo($this)
+			->write("echo $parseField;\n")
+		;
+	}
+}
+
+
+/**
+ * Twig token parser for form fields.
+ *
+ * @author <per@wijs.be>
+ */
+class FormFieldTokenParser extends Twig_TokenParser
+{
+	/**
+	 * @param Twig_Token $token consumed token by the lexer.
+	 * @return Twig_Node
+	 * @throw Twig_Error_Syntax
+	 */
+	public function parse(Twig_Token $token)
+	{
+		$stream = $this->parser->getStream();
+		$field = $stream->expect(Twig_Token::NAME_TYPE)->getValue();
+		$stream->expect(Twig_Token::BLOCK_END_TYPE);
+		if(FormState::$current === null)
+		{
+			throw new Twig_Error_Syntax(
+				sprintf('Cannot render form field [%s] outside a form element', $field),
+				$token->getLine(),
+				$this->parser->getFilename()
+			);
+		}
+		return new FormFieldNode(FormState::$current, $field, $token->getLine(), $this->getTag());
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getTag()
+	{
+		return 'form_field';
+	}
+}
+
+
+/**
+ * Keeps the state of a form between opening and closing the tag.
+ * Since forms cannot be nested, we can resort to a quick 'n dirty yes/no global state.
+ *
+ * In the future we could remove it and use stack {push,popp}ing, but I'm hoping
+ * we're using symfony forms or some other more OO form library.
+ *
+ * @author <per@wijs.be>
+ */
+class FormState
+{
+	public static $current = null;
+}
+
+
+/**
+ * Twig node for writing out the compiled representation of an opeing form tag.
+ *
+ * @author <per@wijs.be>
+ */
+class FormNode extends Twig_Node
+{
+	/**
+	 * @var string Template variable holding the form.
+	 */
+	private $form;
+
+	/**
+	 * @param string $form The name of the template variable to which the form is assigned
+	 * @param int $lineno
+	 * @param string $tag
+	 */
+	public function __construct($form, $lineno, $tag)
+	{
+		parent::__construct(array(), array(), $lineno, $tag);
+		$this->form = $form;
+	}
+
+	/**
+	 * @param Twig_Compiler $compiler
+	 */
+	public function compile(Twig_Compiler $compiler)
+	{
+		// Set some string representations to make the code writing via the
+		// compiler a bit more readable. ("a bit")
+		$frm = "\$context['{$this->form}']";
+		$frmAction = $frm . '->getAction()';
+		$frmMethod = $frm . '->getMethod()';
+		$frmName = $frm . '->getName()';
+		$frmToken = $frm . '->getToken()';
+		$frmUseToken = $frm . '->getUseToken()';
+		$frmParamsHtml = $frm . '->getParametersHTML()';
+		$frmAttrAction = ' action="\', ' . $frmAction . ', \'"';
+		$frmAttrMethod = ' method="\', ' . $frmMethod . ', \'"';
+		$hiddenFormName = '<input type="hidden" name="form" value="\', ' . $frmName . ', \'" id="form\', ucfirst(' . $frmName . '), \'" />';
+		$hiddenFormToken = '<input type="hidden" name="form_token" value="\', ' . $frmToken . ', \'" id="formToken\', ucfirst(' . $frmName . '), \'" />';
+
+		// oh boy
+		$htmlAcceptCharset = (SPOON_CHARSET == 'utf-8')
+			? ' accept-charset="UTF-8"'
+			: '';
+
+		$compiler
+			->addDebugInfo($this)
+
+			->write('echo \'<form')
+			->raw($frmAttrMethod)
+			->raw($frmAttrAction)
+			->raw($htmlAcceptCharset)
+			->raw("', ")
+			->raw(' ' . $frmParamsHtml)
+			->raw(', \'')
+			->raw('>\'')
+			->raw(";\n")
+
+			->write("echo '$hiddenFormName';\n")
+			->write("if($frmUseToken) echo '$hiddenFormToken';")
+		;
+	}
+}
+
+
+/**
+ * Twig template tag for the start/opening element of a form tag.
+ *
+ * @author <per@wijs.be>
+ */
+class FormTokenParser extends Twig_TokenParser
+{
+	/**
+	 * @param Twig_Token $token
+	 * @return Twig_Node
+	 * @throw Twig_Error_Syntax
+	 */
+	public function parse(Twig_Token $token)
+	{
+		$stream = $this->parser->getStream();
+		$form = $stream->expect(Twig_Token::NAME_TYPE)->getValue();
+		$stream->expect(Twig_Token::BLOCK_END_TYPE);
+
+		if(FormState::$current !== null)
+		{
+			throw new Twig_Error_Syntax(
+				sprintf(
+					'form [%s] not closed while opening form [%s]',
+					FormState::$current,
+					$form
+				),
+				$token->getLine(),
+				$stream->getFilename()
+			);
+		}
+		else
+		{
+			FormState::$current = $form;
+		}
+
+		return new FormNode($form, $token->getLine(), $this->getTag());
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getTag()
+	{
+		return 'form';
+	}
+}
+
+
+
+
+
+
+
+
+
+// {{{ OLD NON USED
 /**
  * This is our extended version of SpoonTemplate
  * This class will handle a lot of stuff for you, for example:
@@ -531,251 +1076,7 @@ class BackendTemplate_OLD_ extends SpoonTemplate
 	}
 }
 
-/**
- * This is our class with custom modifiers.
- *
- * @author Tijs Verkoyen <tijs@sumocoders.be>
- */
-class BackendTemplateModifiers
-{
-	/**
-	 * Dumps the data
-	 * 	syntax: {$var|dump}
-	 *
-	 * @param string $var The variable to dump.
-	 * @return string
-	 */
-	public static function dump($var)
-	{
-		Spoon::dump($var, false);
-	}
 
-	/**
-	 * Format a UNIX-timestamp as a date
-	 * syntax: {$var|formatdate}
-	 *
-	 * @param int $var The UNIX-timestamp to format.
-	 * @return string
-	 */
-	public static function formatDate($var)
-	{
-		// get setting
-		$format = BackendAuthentication::getUser()->getSetting('date_format');
 
-		// format the date
-		return SpoonDate::getDate($format, (int) $var, BackendLanguage::getInterfaceLanguage());
-	}
-
-	/**
-	 * Format a UNIX-timestamp as a datetime
-	 * syntax: {$var|formatdatetime}
-	 *
-	 * @param int $var The UNIX-timestamp to format.
-	 * @return string
-	 */
-	public static function formatDateTime($var)
-	{
-		// get setting
-		$format = BackendAuthentication::getUser()->getSetting('datetime_format');
-
-		// format the date
-		return SpoonDate::getDate($format, (int) $var, BackendLanguage::getInterfaceLanguage());
-	}
-
-	/**
-	 * Format a number as a float
-	 * syntax: {$var|formatfloat}
-	 *
-	 * @param float $number The number to format.
-	 * @param int[optional] $decimals The number of decimals.
-	 * @return string
-	 */
-	public static function formatFloat($number, $decimals = 2)
-	{
-		$number = (float) $number;
-		$decimals = (int) $decimals;
-
-		// get setting
-		$format = BackendAuthentication::getUser()->getSetting('number_format', 'dot_nothing');
-
-		// get separators
-		$separators = explode('_', $format);
-		$separatorSymbols = array('comma' => ',', 'dot' => '.', 'space' => ' ', 'nothing' => '');
-		$decimalSeparator = (isset($separators[0], $separatorSymbols[$separators[0]]) ? $separatorSymbols[$separators[0]] : null);
-		$thousandsSeparator = (isset($separators[1], $separatorSymbols[$separators[1]]) ? $separatorSymbols[$separators[1]] : null);
-
-		// format the number
-		return number_format($number, $decimals, $decimalSeparator, $thousandsSeparator);
-	}
-
-	/**
-	 * Format a number
-	 * syntax: {$var|formatnumber}
-	 *
-	 * @param float $var The number to format.
-	 * @return string
-	 */
-	public static function formatNumber($var)
-	{
-		$var = (float) $var;
-
-		// get setting
-		$format = BackendAuthentication::getUser()->getSetting('number_format', 'dot_nothing');
-
-		// get amount of decimals
-		$decimals = (strpos($var, '.') ? strlen(substr($var, strpos($var, '.') + 1)) : 0);
-
-		// get separators
-		$separators = explode('_', $format);
-		$separatorSymbols = array('comma' => ',', 'dot' => '.', 'space' => ' ', 'nothing' => '');
-		$decimalSeparator = (isset($separators[0], $separatorSymbols[$separators[0]]) ? $separatorSymbols[$separators[0]] : null);
-		$thousandsSeparator = (isset($separators[1], $separatorSymbols[$separators[1]]) ? $separatorSymbols[$separators[1]] : null);
-
-		// format the number
-		return number_format($var, $decimals, $decimalSeparator, $thousandsSeparator);
-	}
-
-	/**
-	 * Format a UNIX-timestamp as a date
-	 * syntac: {$var|formatdate}
-	 *
-	 * @param int $var The UNIX-timestamp to format.
-	 * @return string
-	 */
-	public static function formatTime($var)
-	{
-		// get setting
-		$format = BackendAuthentication::getUser()->getSetting('time_format');
-
-		// format the date
-		return SpoonDate::getDate($format, (int) $var, BackendLanguage::getInterfaceLanguage());
-	}
-
-	/**
-	 * Convert a var into main-navigation-html
-	 * 	syntax: {$var|getmainnavigation}
-	 *
-	 * @param string[optional] $var A placeholder var, will be replaced with the generated HTML.
-	 * @return string
-	 */
-	public static function getMainNavigation($var = null)
-	{
-		$var = (string) $var; // @todo what is this doing here?
-		return Spoon::get('navigation')->getNavigation(1, 1);
-	}
-
-	/**
-	 * Convert a var into navigation-html
-	 * syntax: {$var|getnavigation:startdepth[:maximumdepth]}
-	 *
-	 * @param string[optional] $var A placeholder var, will be replaced with the generated HTML.
-	 * @param int[optional] $startDepth The start depth of the navigation to get.
-	 * @param int[optional] $endDepth The ending depth of the navigation to get.
-	 * @return string
-	 */
-	public static function getNavigation($var = null, $startDepth = null, $endDepth = null)
-	{
-		$var = (string) $var;
-		$startDepth = ($startDepth !== null) ? (int) $startDepth : 2;
-		$endDepth = ($endDepth !== null) ? (int) $endDepth : null;
-
-		// return navigation
-		return Spoon::get('navigation')->getNavigation($startDepth, $endDepth);
-	}
-
-	/**
-	 * Convert a var into a URL
-	 * syntax: {$var|geturl:<action>[:<module>]}
-	 *
-	 * @param string[optional] $var A placeholder variable, it will be replaced with the URL.
-	 * @param string[optional] $action The action to build the URL for.
-	 * @param string[optional] $module The module to build the URL for.
-	 * @param string[optional] $suffix A string to append.
-	 * @return string
-	 */
-	public static function getURL($var = null, $action = null, $module = null, $suffix = null)
-	{
-		// redefine
-		$var = (string) $var;
-		$action = ($action !== null) ? (string) $action : null;
-		$module = ($module !== null) ? (string) $module : null;
-
-		// build the url
-		return BackendModel::createURLForAction($action, $module, BackendLanguage::getWorkingLanguage()) . $suffix;
-	}
-
-	/**
-	 * Get a random var between a min and max
-	 * syntax: {$var|rand:min:max}
-	 *
-	 * @param string[optional] $var The string passed from the template.
-	 * @param int $min The minimum number.
-	 * @param int $max The maximim number.
-	 * @return int
-	 */
-	public static function random($var = null, $min, $max)
-	{
-		$var = (string) $var;
-		return rand((int) $min, (int) $max);
-	}
-
-	/**
-	 * Convert a multiline string into a string without newlines so it can be handles by JS
-	 * syntax: {$var|stripnewlines}
-	 *
-	 * @param string $var The variable that should be processed.
-	 * @return string
-	 */
-	public static function stripNewlines($var)
-	{
-		return str_replace(array("\n", "\r"), '', $var);
-	}
-
-	/**
-	 * Convert this string into a well formed label.
-	 * 	syntax: {$var|tolabel}
-	 *
-	 * @param string $value The value to convert to a label.
-	 * @return string
-	 */
-	public static function toLabel($value)
-	{
-		return SpoonFilter::ucfirst(BL::lbl(SpoonFilter::toCamelCase($value, '_', false)));
-	}
-
-	/**
-	 * Truncate a string
-	 * 	syntax: {$var|truncate:max-length[:append-hellip]}
-	 *
-	 * @param string[optional] $var A placeholder var, will be replaced with the generated HTML.
-	 * @param int $length The maximum length of the truncated string.
-	 * @param bool[optional] $useHellip Should a hellip be appended if the length exceeds the requested length?
-	 * @return string
-	 */
-	public static function truncate($var = null, $length, $useHellip = true)
-	{
-		// remove special chars
-		$var = htmlspecialchars_decode($var, ENT_QUOTES);
-
-		// remove HTML
-		$var = strip_tags($var);
-
-		// less characters
-		if(mb_strlen($var) <= $length) return SpoonFilter::htmlspecialchars($var);
-
-		// more characters
-		else
-		{
-			// hellip is seen as 1 char, so remove it from length
-			if($useHellip) $length = $length - 1;
-
-			// get the amount of requested characters
-			$var = mb_substr($var, 0, $length);
-
-			// add hellip
-			if($useHellip) $var .= '…';
-
-			return SpoonFilter::htmlspecialchars($var, ENT_QUOTES);
-		}
-	}
-}
+// }}}
+//

@@ -1,48 +1,59 @@
-{include:{$BACKEND_CORE_PATH}/layout/templates/head.tpl}
+{% extends "base.html.twig" %}
+
+{% block body %}
 <body id="login">
+
+	{# TODO
+
 	{include:{$BACKEND_MODULES_PATH}/{$MODULE}/layout/templates/ie6.tpl}
-	{option:debug}<div id="debugnotify">Debug mode</div>{/option:debug}
+
+	#}
+
+	{% if debug %}<div id="debugnotify">Debug mode</div>{% endif %}
 	<table id="loginHolder">
 		<tr>
 			<td>
-				{option:hasError}
+				{% if hasError %}
 					<div id="loginError">
 						<div class="errorMessage singleMessage">
 							<p>{$errInvalidEmailPasswordCombination}</p>
 						</div>
 					</div>
-				{/option:hasError}
+				{% endif %}
 
-				{option:hasTooManyAttemps}
+				{% if hasTooManyAttemps %}
 					<div id="loginError">
 						<div class="errorMessage singleMessage">
 							<p>{$errTooManyLoginAttempts}</p>
 						</div>
 					</div>
-				{/option:hasTooManyAttemps}
+				{% endif %}
 
-				<div id="loginBox" {option:hasError}class="hasError"{/option:hasError}>
+				<div id="loginBox" {% if hasError %}class="hasError"{% endif %}>
 					<div id="loginBoxTop">
-						<h2>{$SITE_TITLE}</h2>
+						<h2>{{ SITE_TITLE }}</h2>
 					</div>
 
-					{form:authenticationIndex}
+					{% set frmLoginFields = frmLogin.getFields() %}
+					{% form frmLogin %}
 						<div class="horizontal">
 							<div id="loginFields">
 								<p>
 									<label for="backendEmail">{$lblEmail|ucfirst}</label>
-									{$txtBackendEmail} {$txtBackendEmailError}
+									{% form_field backend_email %}
+									{$txtBackendEmailError}
 								</p>
 								<p>
 									<label for="backendPassword">{$lblPassword|ucfirst}</label>
-									{$txtBackendPassword} {$txtBackendPasswordError}
+									{% form_field backend_password %}
+									{$txtBackendPasswordError}
 								</p>
 							</div>
 							<p class="spacing">
 								<input name="login" type="submit" value="{$lblSignIn|ucfirst}" class="inputButton button mainButton" />
 							</p>
 						</div>
-					{/form:authenticationIndex}
+					{% endform %}
 
 					<ul id="loginNav">
 						<li><a href="#" id="forgotPasswordLink" class="toggleBalloon" data-message-id="forgotPasswordHolder">{$msgForgotPassword}</a></li>
@@ -57,10 +68,10 @@
 						<div class="balloonTop">&nbsp;</div>
 
 						<p>{$msgHelpForgotPassword}</p>
-						{form:forgotPassword}
+						{% form frmForgotPassword %}
 							<div class="oneLiner">
 								<p><label for="backendEmailForgot">{$lblEmail|ucfirst}</label></p>
-								<p>{$txtBackendEmailForgot}</p>
+								<p>{% form_field backend_email_forgot %}</p>
 								<p>
 									<input id="send" type="submit" name="send" value="{$lblSend|ucfirst}" />
 								</p>
@@ -77,11 +88,22 @@
 									<p>{$msgLoginFormForgotPasswordSuccess}</p>
 								</div>
 							{/option:isForgotPasswordSuccess}
-						{/form:forgotPassword}
+						{% endform %}
 					</div>
 				</div>
 
 			</td>
 		</tr>
 	</table>
-{include:{$BACKEND_CORE_PATH}/layout/templates/footer.tpl}
+	{% block messaging %}
+		{{ parent() }}
+	{% endblock %}
+
+	{% block ajaxSpinner %}
+		{{ parent() }}
+	{% endblock %}
+
+</body>
+{% endblock %}
+
+
