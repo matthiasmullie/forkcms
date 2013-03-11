@@ -16,7 +16,7 @@
 				{% if hasError %}
 					<div id="loginError">
 						<div class="errorMessage singleMessage">
-							<p>{$errInvalidEmailPasswordCombination}</p>
+							<p>{{ err.InvalidEmailPasswordCombination }}</p>
 						</div>
 					</div>
 				{% endif %}
@@ -24,7 +24,7 @@
 				{% if hasTooManyAttemps %}
 					<div id="loginError">
 						<div class="errorMessage singleMessage">
-							<p>{$errTooManyLoginAttempts}</p>
+							<p>{{ err.TooManyLoginAttempts }}</p>
 						</div>
 					</div>
 				{% endif %}
@@ -39,41 +39,41 @@
 						<div class="horizontal">
 							<div id="loginFields">
 								<p>
-									<label for="backendEmail">{$lblEmail|ucfirst}</label>
+									<label for="backendEmail">{{lbl.Email|ucfirst}}</label>
 									{% form_field backend_email %}
 									{$txtBackendEmailError}
 								</p>
 								<p>
-									<label for="backendPassword">{$lblPassword|ucfirst}</label>
+									<label for="backendPassword">{{lbl.Password|ucfirst}}</label>
 									{% form_field backend_password %}
 									{$txtBackendPasswordError}
 								</p>
 							</div>
 							<p class="spacing">
-								<input name="login" type="submit" value="{$lblSignIn|ucfirst}" class="inputButton button mainButton" />
+								<input name="login" type="submit" value="{{lbl.SignIn|ucfirst}}" class="inputButton button mainButton" />
 							</p>
 						</div>
 					{% endform %}
 
 					<ul id="loginNav">
-						<li><a href="#" id="forgotPasswordLink" class="toggleBalloon" data-message-id="forgotPasswordHolder">{$msgForgotPassword}</a></li>
+						<li><a href="#" id="forgotPasswordLink" class="toggleBalloon" data-message-id="forgotPasswordHolder">{{ msg.ForgotPassword }}</a></li>
 					</ul>
 				</div>
 
-				<div id="forgotPasswordHolder" class="balloon {option:!showForm}balloonNoMessage{/option:!showForm}"{option:!showForm} style="display: none;"{/option:!showForm}>
+				<div id="forgotPasswordHolder" class="balloon {% if not showForm %}balloonNoMessage{% endif %}"{% if not showForm %} style="display: none;"{% endif %}>
 					<div id="forgotPasswordBox">
 
 						<a class="button linkButton icon iconClose iconOnly toggleBalloon" href="#" data-message-id="forgotPasswordHolder"><span>X</span></a>
 
 						<div class="balloonTop">&nbsp;</div>
 
-						<p>{$msgHelpForgotPassword}</p>
+						<p>{{ msg.HelpForgotPassword }}</p>
 						{% form frmForgotPassword %}
 							<div class="oneLiner">
-								<p><label for="backendEmailForgot">{$lblEmail|ucfirst}</label></p>
+								<p><label for="backendEmailForgot">{{ lbl.Email|ucfirst }}</label></p>
 								<p>{% form_field backend_email_forgot %}</p>
 								<p>
-									<input id="send" type="submit" name="send" value="{$lblSend|ucfirst}" />
+									<input id="send" type="submit" name="send" value="{{ lbl.Send|ucfirst }}" />
 								</p>
 							</div>
 
@@ -85,7 +85,7 @@
 
 							{option:isForgotPasswordSuccess}
 								<div class="successMessage singleMessage">
-									<p>{$msgLoginFormForgotPasswordSuccess}</p>
+									<p>{{ msg.LoginFormForgotPasswordSuccess }}</p>
 								</div>
 							{/option:isForgotPasswordSuccess}
 						{% endform %}

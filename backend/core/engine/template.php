@@ -16,6 +16,13 @@
 class BackendTemplate
 {
 	/**
+	 * Should we add slashes to each value?
+	 *
+	 * @var bool
+	 */
+	private $addSlashes = false;
+
+	/**
 	 * @var \Twig_Environment
 	 */
 	private $twig;
@@ -148,6 +155,72 @@ class BackendTemplate
 
 	private function registerTranslations()
 	{
+		if(Spoon::exists('url')) $currentModule = Spoon::get('url')->getModule();
+		elseif(isset($_GET['module']) && $_GET['module'] != '') $currentModule = (string) $_GET['module'];
+		else $currentModule = 'core';
+
+		$errors = BackendLanguage::getErrors();
+		$realErrors = $errors['core'];
+
+		$labels = BackendLanguage::getLabels();
+		$realLabels = $labels['core'];
+
+		$messages = BackendLanguage::getMessages();
+		$realMessages = $messages['core'];
+
+		// loop all errors, label, messages and add them again, but prefixed with Core. So we can decide in the
+		// template to use the core-value instead of the one set by the module
+		foreach($errors['core'] as $key => $value) $realErrors['Core' . $key] = $value;
+		foreach($labels['core'] as $key => $value) $realLabels['Core' . $key] = $value;
+		foreach($messages['core'] as $key => $value) $realMessages['Core' . $key] = $value;
+
+		// are there errors for the current module?
+		if(isset($errors[$currentModule]))
+		{
+			// loop the module-specific errors and reset them in the array with values we will use
+			foreach($errors[$currentModule] as $key => $value) $realErrors[$key] = $value;
+		}
+
+		// are there labels for the current module?
+		if(isset($labels[$currentModule]))
+		{
+			// loop the module-specific labels and reset them in the array with values we will use
+			foreach($labels[$currentModule] as $key => $value) $realLabels[$key] = $value;
+		}
+
+		// are there messages for the current module?
+		if(isset($messages[$currentModule]))
+		{
+			// loop the module-specific errors and reset them in the array with values we will use
+			foreach($messages[$currentModule] as $key => $value) $realMessages[$key] = $value;
+		}
+
+		// execute addslashes on the values for the locale, will be used in JS
+		if($this->addSlashes)
+		{
+			foreach($realErrors as &$value) $value = addslashes($value);
+			foreach($realLabels as &$value) $value = addslashes($value);
+			foreach($realMessages as &$value) $value = addslashes($value);
+		}
+
+		// sort the arrays (just to make it look beautifull)
+		ksort($realErrors);
+		ksort($realLabels);
+		ksort($realMessages);
+
+		$this->twig->addGlobal('err', $realErrors);
+		$this->twig->addGlobal('lbl', $realLabels);
+		$this->twig->addGlobal('msg', $realMessages);
+	}
+
+	/**
+	 * Should we execute addSlashed on the locale?
+	 *
+	 * @param bool[optional] $on Enable addslashes.
+	 */
+	public function setAddSlashes($on = true)
+	{
+		$this->addSlashes = (bool) $on;
 	}
 }
 
