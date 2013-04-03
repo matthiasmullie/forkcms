@@ -2,11 +2,11 @@
 
 {% block module %}
 	<div class="pageTitle">
-		<h2>{$lblFaq|ucfirst}: {$lblCategories}</h2>
+		<h2>{{ BL.lbl('Faq')|ucfirst }}: {{ BL.lbl('Categories') }}</h2>
 
 		{% if showFaqAddCategory %}
 		<div class="buttonHolderRight">
-			<a href="{{ var|geturl('add_category') }}" class="button icon iconAdd"><span>{$lblAddCategory|ucfirst}</span></a>
+			<a href="{{ var|geturl('add_category') }}" class="button icon iconAdd"><span>{{ BL.lbl('AddCategory')|ucfirst }}</span></a>
 		</div>
 		{% endif %}
 	</div>
@@ -15,6 +15,6 @@
 			{{ dataGrid|raw }}
 		</div>
 	{% else %}
-		{$msgNoCategories}
+		{{ BL.msg('NoCategories') }}
 	{% endif %}
 {% endblock %}

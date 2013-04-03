@@ -42,7 +42,6 @@ class BackendTemplate
 		$this->registerFilters();
 		$this->registerTags();
 		$this->registerGlobals();
-		$this->registerTranslations();
 	}
 
 	/**
@@ -140,10 +139,10 @@ class BackendTemplate
 		// TODO hmz, here we assume the current user is authenticated already.
 		$this->twig->addGlobal('user', BackendAuthentication::getUser());
 
-		$languages = BackendLanguage::getWorkingLanguages();
-		$workingLanguages = array();
-		foreach($languages as $abbreviation => $label) $workingLanguages[] = array('abbr' => $abbreviation, 'label' => $label, 'selected' => ($abbreviation == BackendLanguage::getWorkingLanguage()));
-		$this->twig->addGlobal('workingLanguages', $workingLanguages);
+		// TODO backend/core/engine/javascript.php
+		//       It uses addSlashes, which was used to addslashes on the labels.
+		// TODO Can we register BL as is? ie. as a class instead of an instance.
+		$this->twig->addGlobal('BL', new BL());
 	}
 
 	private function registerTags()

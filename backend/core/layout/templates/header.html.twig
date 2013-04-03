@@ -1,5 +1,5 @@
 <div id="headerHolder">
-	<h1><a href="/{% if SITE_MULTILANGUAGE %}{{ LANGUAGE }}{% endif %}" title="{{ "lblVisitWebsite"|ucfirst }}">{{ SITE_TITLE }}</a></h1>
+	<h1><a href="/{% if SITE_MULTILANGUAGE %}{{ BL.getWorkingLanguage() }}{% endif %}" title="{{ BL.lbl('VisitWebsite')|ucfirst }}">{{ SITE_TITLE }}</a></h1>
 	<table id="header">
 		<tr>
 			<td id="navigation">
@@ -9,16 +9,16 @@
 				<ul>
 					{% if debug %}
 						<li>
-							<div id="debugnotify">{{ lblDebugMode|ucfirst }}</div>
+							<div id="debugnotify">{{ BL.lbl('DebugMode')|ucfirst }}</div>
 						</li>
 					{% endif %}
 
-					{% if SITE_MULTILANGUAGE and workingLanguages %}
+					{% if SITE_MULTILANGUAGE and BL.getWorkingLanguages() %}
 						<li>
-						<label for="workingLanguage">{{ "msgNowEditing" }}:</label>
+						<label for="workingLanguage">{{ BL.msg('NowEditing')|ucfirst }}:</label>
 							<select id="workingLanguage">
-								{% for wl in workingLanguages %}
-								<option{% if wl.selected %} selected="selected"{% endif %} value="{{ wl.abbr }}">{{ wl.label|ucfirst }}</option>
+								{% for abbr, label in BL.getWorkingLanguages() %}
+								<option{% if abbr == BL.getWorkingLanguage() %} selected="selected"{% endif %} value="{{ abbr }}">{{ label|ucfirst }}</option>
 								{% endfor %}
 							</select>
 						</li>
@@ -27,14 +27,14 @@
 					<li id="account">
 						<a href="#ddAccount" id="openAccountDropdown" class="fakeDropdown">
 							<span class="avatar av24 block">
-								<img src="{$FRONTEND_FILES_URL}/backend_users/avatars/32x32/{$authenticatedUserAvatar}" width="24" height="24" alt="{$authenticatedUserNickname}" />
+								<img src="{{ FRONTEND_FILES_URL }}/backend_users/avatars/32x32/{{ user.getSetting('avatar') }}" width="24" height="24" alt="{{ user.getSetting('nickname') }}" />
 							</span>
-							<span class="nickname">{$authenticatedUserNickname}</span>
+							<span class="nickname">{{ user.getSetting('nickname') }}</span>
 							<span class="arrow">&#x25BC;</span>
 						</a>
 						<ul class="hidden" id="ddAccount">
-							{option:authenticatedUserEditUrl}<li><a href="{$authenticatedUserEditUrl}">{$lblEditProfile|ucfirst}</a></li>{/option:authenticatedUserEditUrl}
-							<li class="lastChild"><a href="{$var|geturl:'logout':'authentication'}">{$lblSignOut|ucfirst}</a></li>
+							{% if authenticatedUserEditUrl %}<li><a href="{{ authenticatedUserEditUrl }}">{{ BL.lbl('EditProfile')|ucfirst }}</a></li>{% endif %}
+							<li class="lastChild"><a href="{{ var|geturl('logout', 'authentication') }}">{{ BL.lbl('SignOut')|ucfirst }}</a></li>
 						</ul>
 					</li>
 				</ul>

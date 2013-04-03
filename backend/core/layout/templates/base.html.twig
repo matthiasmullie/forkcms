@@ -25,9 +25,9 @@
 			// reports
 			$(function()
 			{
-				{% if formError %}jsBackend.messages.add('error', "{{ errFormError|addslashes }}");{% endif %}
-				{% if usingRevision %}jsBackend.messages.add('notice', "{{ msgUsingARevision|addslashes }}");{% endif %}
-				{% if usingDraft %}jsBackend.messages.add('notice', "{{ msgUsingADraft|addslashes }}");{% endif %}
+				{% if formError %}jsBackend.messages.add('error', "{{ BL.err('FormError')|addslashes }}");{% endif %}
+				{% if usingRevision %}jsBackend.messages.add('notice', "{{ BL.msg('UsingARevision')|addslashes }}");{% endif %}
+				{% if usingDraft %}jsBackend.messages.add('notice', "{{ BL.msg('UsingADraft')|addslashes }}");{% endif %}
 				{% if report %}jsBackend.messages.add('success', "{{ reportMessage|addslashes }}");{% endif %}
 				{% if errorMessage %}jsBackend.messages.add('error', "{{ errorMessage|addslashes }}");{% endif %}
 			});
@@ -41,11 +41,11 @@
 		<div id="messaging">
 			<noscript>
 				<div class="formMessage errorMessage">
-					<p>{$errJavascriptNotEnabled}</p>
+					<p>{{ BL.err('JavascriptNotEnabled') }}</p>
 				</div>
 			</noscript>
 			<div id="noCookies" class="formMessage errorMessage" style="display: none;">
-				<p>{$errCookiesNotEnabled}</p>
+				<p>{{ BL.err('CookiesNotEnabled') }}</p>
 			</div>
 		</div>
 	{% endblock %}
