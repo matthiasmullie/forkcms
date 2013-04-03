@@ -151,6 +151,7 @@ class BackendTemplate
 		$this->twig->addTokenParser(new FormTokenParser());
 		$this->twig->addTokenParser(new EndformTokenParser());
 		$this->twig->addTokenParser(new FormFieldTokenParser());
+		$this->twig->addTokenParser(new FormFieldErrorTokenParser());
 	}
 
 	private function registerTranslations()
@@ -557,6 +558,9 @@ class EndformTokenParser extends Twig_TokenParser
  */
 class FormFieldNode extends Twig_Node
 {
+	private $form;
+	private $field;
+
 	/**
 	 * @param string $form Name of the template var holding the form this field
 	 *                     belongs to.
@@ -619,6 +623,83 @@ class FormFieldTokenParser extends Twig_TokenParser
 	public function getTag()
 	{
 		return 'form_field';
+	}
+}
+
+
+/**
+ * Twig note for writing out the compiled version of a form field error.
+ *
+ * @author <per@wijs.be>
+ */
+class FormFieldErrorNode extends Twig_Node
+{
+	private $form;
+	private $field;
+
+	/**
+	 * @param string $form Name of the template var holding the form this field
+	 *                     error belongs to.
+	 * @param string $field Name of the field of which we need to render the error.
+	 * @param int $lineno Line number in the template source file.
+	 * @param string $tag the name of the template tag.
+	 */
+	public function __construct($form, $field, $lineno, $tag)
+	{
+		parent::__construct(array(), array(), $lineno, $tag);
+		$this->form = $form;
+		$this->field = $field;
+	}
+
+	public function compile(Twig_Compiler $compiler)
+	{
+		$writeErrorMessage = "echo "
+			. "\$context['{$this->form}']->getField('{$this->field}')->getErrors() "
+			. "? '<span class=\"formError\">' "
+			. ". \$context['{$this->form}']->getField('{$this->field}')->getErrors() "
+			. ". '</span>' : '';";
+		$compiler
+			->addDebugInfo($this)
+			->write($writeErrorMessage)
+		;
+	}
+}
+
+/**
+ * Twig token parser for form field errors.
+ *
+ * @author <per@wijs.be>
+ */
+class FormFieldErrorTokenParser extends Twig_TokenParser
+{
+	/**
+	 * @param Twig_Token $token consumed token by the lexer.
+	 * @return Twig_Node
+	 * @throw Twig_Error_Syntax
+	 */
+	public function parse(Twig_Token $token)
+	{
+		$stream = $this->parser->getStream();
+		$field = $stream->expect(Twig_Token::NAME_TYPE)->getValue();
+		$stream->expect(Twig_Token::BLOCK_END_TYPE);
+		if(FormState::$current === null)
+		{
+			throw new Twig_Error_Syntax(
+				sprintf('Cannot render form field error [%s] outside a form element', $field),
+				$token->getLine(),
+				$this->parser->getFilename()
+			);
+		}
+		return new FormFieldErrorNode(
+			FormState::$current, $field, $token->getLine(), $this->getTag());
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getTag()
+	{
+		return 'form_field_error';
 	}
 }
 

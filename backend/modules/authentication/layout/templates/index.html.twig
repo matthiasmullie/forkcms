@@ -34,19 +34,18 @@
 						<h2>{{ SITE_TITLE }}</h2>
 					</div>
 
-					{% set frmLoginFields = frmLogin.getFields() %}
 					{% form frmLogin %}
 						<div class="horizontal">
 							<div id="loginFields">
 								<p>
 									<label for="backendEmail">{{lbl.Email|ucfirst}}</label>
 									{% form_field backend_email %}
-									{$txtBackendEmailError}
+									{% form_field_error backend_email %}
 								</p>
 								<p>
 									<label for="backendPassword">{{lbl.Password|ucfirst}}</label>
 									{% form_field backend_password %}
-									{$txtBackendPasswordError}
+									{% form_field_error backend_password %}
 								</p>
 							</div>
 							<p class="spacing">
