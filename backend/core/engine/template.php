@@ -42,6 +42,7 @@ class BackendTemplate
 		$this->registerFilters();
 		$this->registerTags();
 		$this->registerGlobals();
+		$this->registerConstants();
 	}
 
 	/**
@@ -89,6 +90,56 @@ class BackendTemplate
 	public function loadTemplate($template)
 	{
 		return $this->twig->loadTemplate($template);
+	}
+
+	/**
+	 * Parse all user-defined constants
+	 *
+	 * TODO make this smaller if possible, atm it is just a copypasted method.
+	 */
+	private function registerConstants()
+	{
+		// constants that should be protected from usage in the template
+		$notPublicConstants = array('DB_TYPE', 'DB_DATABASE', 'DB_HOSTNAME', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD');
+
+		// get all defined constants
+		$constants = get_defined_constants(true);
+
+		// init var
+		$realConstants = array();
+
+		// remove protected constants aka constants that should not be used in the template
+		foreach($constants['user'] as $key => $value)
+		{
+			if(!in_array($key, $notPublicConstants)) $realConstants[$key] = $value;
+		}
+
+		foreach($realConstants as $key => $value)
+		{
+			$this->assign($key, $value);
+		}
+
+		if($this->url instanceof BackendURL)
+		{
+			// assign the current module
+			$this->assign('MODULE', $this->url->getModule());
+
+			// assign the current action
+			if($this->url->getAction() != '') $this->assign('ACTION', $this->url->getAction());
+		}
+
+		// is the user object filled?
+		if(BackendAuthentication::getUser()->isAuthenticated())
+		{
+			// assign the authenticated users secret key
+			$this->assign('SECRET_KEY', BackendAuthentication::getUser()->getSecretKey());
+
+			// assign the authentiated users preferred interface language
+			$this->assign('INTERFACE_LANGUAGE', (string) BackendAuthentication::getUser()->getSetting('interface_language'));
+		}
+
+		// assign some variable constants (such as site-title)
+		$this->assign('SITE_TITLE', BackendModel::getModuleSetting('core', 'site_title_' . BackendLanguage::getWorkingLanguage(), SITE_DEFAULT_TITLE));
 	}
 
 	/**
